@@ -98,10 +98,11 @@ class MainWindow(QMainWindow):
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window
         )
-        # Don't set translucent background — child gradients are already
-        # semi-transparent over the QMainWindow body.
+        # Translucent window background so the rounded corners on the
+        # inner Background frame actually show through as transparency.
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
-        central = QWidget()
+        central = QFrame()
         central.setObjectName("Background")
         self.setCentralWidget(central)
 
@@ -159,15 +160,11 @@ class MainWindow(QMainWindow):
         self.resell_tab.state_changed.connect(self._schedule_save)
         self.catalysts_tab.state_changed.connect(self._schedule_save)
 
-        # ---- Resize grip in bottom-right --------------------------------
-        grip_bar = QHBoxLayout()
-        grip_bar.setContentsMargins(0, 0, 4, 4)
-        grip_bar.setSpacing(0)
-        grip_bar.addStretch(1)
-        grip = QSizeGrip(self)
-        grip.setObjectName("SizeGrip")
-        grip_bar.addWidget(grip, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
-        root.addLayout(grip_bar)
+        # ---- Resize grip — top-level so it sits over rounded corner ----
+        self._size_grip = QSizeGrip(self)
+        self._size_grip.setObjectName("SizeGrip")
+        self._size_grip.setFixedSize(16, 16)
+        self._size_grip.raise_()
 
         # ---- Animations -------------------------------------------------
         self._anim: Optional[QPropertyAnimation] = None
@@ -241,6 +238,17 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):  # type: ignore[override]
         self._save()
         super().closeEvent(event)
+
+    def resizeEvent(self, event):  # type: ignore[override]
+        super().resizeEvent(event)
+        # Keep the size-grip pinned to the bottom-right corner, inset just
+        # enough to stay inside the rounded background.
+        margin = 6
+        self._size_grip.move(
+            self.width() - self._size_grip.width() - margin,
+            self.height() - self._size_grip.height() - margin,
+        )
+        self._size_grip.raise_()
 
 
 def build_app() -> tuple[QApplication, MainWindow]:
