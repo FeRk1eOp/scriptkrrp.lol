@@ -41,20 +41,30 @@ pip install -r stalcraft_helper/requirements.txt
 python -m stalcraft_helper
 ```
 
+Или через launcher-скрипт (он же используется для сборки `.exe`):
+
+```bash
+python launch.py
+```
+
 Состояние (цены, карточки, выбранные картинки) сохраняется в
 `~/.stalcraft_helper/state.json` и подгружается при следующем запуске.
 
 ## Сборка .exe (Windows)
 
 В одну команду через [PyInstaller](https://pyinstaller.org). Запускать
-на Windows из корня репозитория (где лежит папка `stalcraft_helper`):
+на Windows из корня репозитория (где лежат `launch.py` и папка
+`stalcraft_helper`). **Важно**: сборка идёт через `launch.py`, а **не**
+через `stalcraft_helper/__main__.py` — у `__main__.py` относительные
+импорты, и при запуске собранного `.exe` он бы упал с ошибкой
+`attempted relative import with no known parent package`.
 
 ```bat
 pip install pyinstaller
 pyinstaller --noconfirm --windowed --onefile ^
   --name "STALCRAFT helper" ^
   --add-data "stalcraft_helper/style.qss;stalcraft_helper" ^
-  stalcraft_helper/__main__.py
+  launch.py
 ```
 
 После сборки берёшь готовый файл `dist\STALCRAFT helper.exe` — это
@@ -66,7 +76,7 @@ pyinstaller --noconfirm --windowed --onefile ^
 команда пишется в одну строку:
 
 ```bat
-pyinstaller --noconfirm --windowed --onefile --name "STALCRAFT helper" --add-data "stalcraft_helper/style.qss;stalcraft_helper" stalcraft_helper/__main__.py
+pyinstaller --noconfirm --windowed --onefile --name "STALCRAFT helper" --add-data "stalcraft_helper/style.qss;stalcraft_helper" launch.py
 ```
 
 > Совет: первая сборка займёт пару минут, потому что PyInstaller
