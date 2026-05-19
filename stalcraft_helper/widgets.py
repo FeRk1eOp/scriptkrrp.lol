@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QSpinBox,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -30,7 +31,7 @@ def _supported_image_filter() -> str:
 
 
 class ItemCard(QFrame):
-    """A single item card: image, name, price, quantity, subtotal, remove."""
+    """A single item card with toggleable edit / view modes."""
 
     changed = pyqtSignal()
     removed = pyqtSignal(object)
@@ -56,15 +57,25 @@ class ItemCard(QFrame):
 
         self.item_id = item_id or uuid.uuid4().hex
         self._image_path: Optional[str] = None
+        self._editing = True
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(10, 10, 10, 10)
+        outer.setContentsMargins(10, 8, 10, 10)
         outer.setSpacing(6)
 
+        # ---- Header: edit-toggle + remove ----
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         header.setSpacing(4)
         header.addStretch(1)
+
+        self.edit_toggle = QPushButton("✎")
+        self.edit_toggle.setObjectName("CardEdit")
+        self.edit_toggle.setToolTip("Изменить")
+        self.edit_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.edit_toggle.clicked.connect(self._on_toggle_clicked)
+        header.addWidget(self.edit_toggle)
+
         self.remove_btn = QPushButton("×")
         self.remove_btn.setObjectName("Danger")
         self.remove_btn.setToolTip("Удалить предмет")
@@ -73,6 +84,7 @@ class ItemCard(QFrame):
         header.addWidget(self.remove_btn)
         outer.addLayout(header)
 
+        # ---- Image (shared between modes) ----
         self.image_btn = QPushButton("Добавить картинку")
         self.image_btn.setObjectName("ImageButton")
         self.image_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -81,11 +93,33 @@ class ItemCard(QFrame):
         self.image_btn.clicked.connect(self._choose_image)
         outer.addWidget(self.image_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
+        # ---- Stacked content: edit / view ----
+        self.content_stack = QStackedWidget()
+        outer.addWidget(self.content_stack, 1)
+
+        self.content_stack.addWidget(self._build_edit_page(name, price, quantity))
+        self.content_stack.addWidget(self._build_view_page())
+
+        if image_path:
+            self._apply_image(image_path)
+
+        # Newly created (empty) card → edit. Loaded card with a filled name → view.
+        is_filled = bool(name.strip()) or price > 0
+        self._set_editing(not is_filled, emit=False)
+        self._refresh_subtotal()
+
+    # ---- Page builders --------------------------------------------------
+    def _build_edit_page(self, name: str, price: float, quantity: int) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText("Название")
         self.name_edit.setText(name)
-        self.name_edit.textChanged.connect(self.changed.emit)
-        outer.addWidget(self.name_edit)
+        self.name_edit.textChanged.connect(self._on_text_changed)
+        layout.addWidget(self.name_edit)
 
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
@@ -123,7 +157,7 @@ class ItemCard(QFrame):
         qty_col.addWidget(self.qty_edit)
         row.addLayout(qty_col)
 
-        outer.addLayout(row)
+        layout.addLayout(row)
 
         bottom = QHBoxLayout()
         bottom.setContentsMargins(0, 2, 0, 0)
@@ -137,12 +171,42 @@ class ItemCard(QFrame):
         bottom.addWidget(sum_label)
         bottom.addStretch(1)
         bottom.addWidget(self.subtotal_label)
-        outer.addLayout(bottom)
+        layout.addLayout(bottom)
 
-        if image_path:
-            self._apply_image(image_path)
+        return page
 
-        self._refresh_subtotal()
+    def _build_view_page(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 2, 0, 0)
+        layout.setSpacing(4)
+
+        self.name_view = QLabel("—")
+        self.name_view.setObjectName("CardName")
+        self.name_view.setWordWrap(True)
+        layout.addWidget(self.name_view)
+
+        self.priceqty_view = QLabel("0 × 0")
+        self.priceqty_view.setObjectName("CardPriceQty")
+        layout.addWidget(self.priceqty_view)
+
+        layout.addStretch(1)
+
+        bottom = QHBoxLayout()
+        bottom.setContentsMargins(0, 0, 0, 0)
+        sum_label = QLabel("Сумма")
+        sum_label.setObjectName("Field")
+        self.subtotal_view = QLabel("0")
+        self.subtotal_view.setObjectName("Subtotal")
+        self.subtotal_view.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        bottom.addWidget(sum_label)
+        bottom.addStretch(1)
+        bottom.addWidget(self.subtotal_view)
+        layout.addLayout(bottom)
+
+        return page
 
     # ---- Public API -----------------------------------------------------
     def subtotal(self) -> float:
@@ -157,13 +221,46 @@ class ItemCard(QFrame):
             "image_path": self._image_path,
         }
 
+    # ---- Edit / view toggle --------------------------------------------
+    def _on_toggle_clicked(self) -> None:
+        self._set_editing(not self._editing, emit=True)
+
+    def _set_editing(self, editing: bool, *, emit: bool) -> None:
+        self._editing = editing
+        self.content_stack.setCurrentIndex(0 if editing else 1)
+        self.edit_toggle.setText("✓" if editing else "✎")
+        self.edit_toggle.setToolTip("Готово" if editing else "Изменить")
+        self.edit_toggle.setProperty("active", "true" if editing else "false")
+        style = self.edit_toggle.style()
+        style.unpolish(self.edit_toggle)
+        style.polish(self.edit_toggle)
+        if not editing:
+            self._refresh_view()
+        if emit:
+            self.changed.emit()
+
     # ---- Internal -------------------------------------------------------
+    def _on_text_changed(self, _: str) -> None:
+        if not self._editing:
+            self._refresh_view()
+        self.changed.emit()
+
     def _on_value_changed(self, _: float) -> None:
         self._refresh_subtotal()
         self.changed.emit()
 
     def _refresh_subtotal(self) -> None:
-        self.subtotal_label.setText(format_number(self.subtotal()))
+        total = format_number(self.subtotal())
+        self.subtotal_label.setText(total)
+        self.subtotal_view.setText(total)
+        self._refresh_view()
+
+    def _refresh_view(self) -> None:
+        name = self.name_edit.text().strip() or "—"
+        self.name_view.setText(name)
+        price = self.price_edit.value()
+        qty = int(self.qty_edit.value())
+        self.priceqty_view.setText(f"{format_number(price)} × {qty}")
 
     def _choose_image(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -228,7 +325,7 @@ class AddCard(QFrame):
         plus = QLabel("+")
         plus.setAlignment(Qt.AlignmentFlag.AlignCenter)
         plus.setStyleSheet(
-            "font-size: 56px; font-weight: 300; color: #555555;"
+            "font-size: 56px; font-weight: 300; color: rgba(255, 255, 255, 0.35);"
         )
         layout.addWidget(plus)
 
