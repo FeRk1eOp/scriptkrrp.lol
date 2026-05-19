@@ -44,6 +44,36 @@ python -m stalcraft_helper
 Состояние (цены, карточки, выбранные картинки) сохраняется в
 `~/.stalcraft_helper/state.json` и подгружается при следующем запуске.
 
+## Сборка .exe (Windows)
+
+В одну команду через [PyInstaller](https://pyinstaller.org). Запускать
+на Windows из корня репозитория (где лежит папка `stalcraft_helper`):
+
+```bat
+pip install pyinstaller
+pyinstaller --noconfirm --windowed --onefile ^
+  --name "STALCRAFT helper" ^
+  --add-data "stalcraft_helper/style.qss;stalcraft_helper" ^
+  stalcraft_helper/__main__.py
+```
+
+После сборки берёшь готовый файл `dist\STALCRAFT helper.exe` — это
+один файл, кидаешь на рабочий стол и запускаешь двойным кликом, ничего
+дополнительно ставить не надо. Папки `build/` и `*.spec` можно удалить.
+
+Если PowerShell ругается на `^` — это символ переноса строки для
+`cmd.exe`. В PowerShell используется `` ` `` (обратный апостроф) либо
+команда пишется в одну строку:
+
+```bat
+pyinstaller --noconfirm --windowed --onefile --name "STALCRAFT helper" --add-data "stalcraft_helper/style.qss;stalcraft_helper" stalcraft_helper/__main__.py
+```
+
+> Совет: первая сборка займёт пару минут, потому что PyInstaller
+> анализирует PyQt6. Размер `.exe` — около 40–60 МБ, это нормально
+> (внутри лежит Python + Qt). Если хочешь иконку — добавь
+> `--icon path\to\icon.ico`.
+
 ## Дисклеймер
 
 Это внешний инструмент. Он не читает память игры, не подключается к

@@ -220,6 +220,60 @@ QPushButton#Danger:hover {
     color: #ff8a8a;
 }
 
+/* ===== Card edit-toggle (pencil / checkmark) ===== */
+QPushButton#CardEdit {
+    background-color: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0;
+    min-width: 22px;
+    max-width: 22px;
+    min-height: 22px;
+    max-height: 22px;
+    border-radius: 11px;
+}
+
+QPushButton#CardEdit:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+QPushButton#CardEdit[active="true"] {
+    background-color: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+
+/* ===== Window control buttons (custom title bar) ===== */
+QPushButton#WindowMin, QPushButton#WindowClose {
+    background-color: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 15px;
+    font-weight: 700;
+    padding: 0 0 4px 0;
+    border-radius: 6px;
+}
+
+QPushButton#WindowMin:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+}
+
+QPushButton#WindowMin:pressed {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+QPushButton#WindowClose:hover {
+    background-color: rgba(232, 17, 35, 0.85);
+    color: #ffffff;
+}
+
+QPushButton#WindowClose:pressed {
+    background-color: rgba(200, 12, 28, 0.85);
+}
+
 /* ===== Labels ===== */
 QLabel#Title {
     font-size: 15px;
@@ -292,6 +346,18 @@ QLabel#ResultValue {
     color: #ffffff;
 }
 
+QLabel#CardName {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+QLabel#CardPriceQty {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+}
+
 /* ===== Misc ===== */
 QFrame#Divider {
     background-color: rgba(255, 255, 255, 0.08);
@@ -341,4 +407,10 @@ QToolTip {
     border: 1px solid rgba(255, 255, 255, 0.18);
     padding: 4px 8px;
     border-radius: 6px;
+}
+
+QSizeGrip {
+    width: 14px;
+    height: 14px;
+    background-color: transparent;
 }
